@@ -5,17 +5,17 @@ slos:
   - name: availability
     objective: 99 # % of non-5xx requests over 28d
     indicator:
-      good: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_response_status_code!~"5.."}[28d]))'
-      total: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api"}[28d]))'
+      good: 'sum(rate(http_server_duration_milliseconds_count{job="notes-api",http_status_code!~"5.."}[28d]))'
+      total: 'sum(rate(http_server_duration_milliseconds_count{job="notes-api"}[28d]))'
 
   - name: read_latency_p95
     objective: 99 # % of GET requests served < 100ms
     indicator:
-      good: 'sum(rate(http_server_request_duration_seconds_bucket{job="notes-api",http_request_method="GET",le="0.1"}[28d]))'
-      total: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_request_method="GET"}[28d]))'
+      good: 'sum(rate(http_server_duration_milliseconds_bucket{job="notes-api",http_method="GET",le="100"}[28d]))'
+      total: 'sum(rate(http_server_duration_milliseconds_count{job="notes-api",http_method="GET"}[28d]))'
 
   - name: write_latency_p95
-    objective: 99 # % of POST requests served < 300ms
+    objective: 99 # % of POST requests served < 300ms (nearest histogram bucket le=250ms)
     indicator:
-      good: 'sum(rate(http_server_request_duration_seconds_bucket{job="notes-api",http_request_method="POST",le="0.3"}[28d]))'
-      total: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_request_method="POST"}[28d]))'
+      good: 'sum(rate(http_server_duration_milliseconds_bucket{job="notes-api",http_method="POST",le="250"}[28d]))'
+      total: 'sum(rate(http_server_duration_milliseconds_count{job="notes-api",http_method="POST"}[28d]))'

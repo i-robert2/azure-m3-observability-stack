@@ -198,6 +198,39 @@ Add Grafana data sources: **Loki** `http://loki-read.loki.svc.cluster.local:3100
 
 ---
 
+## Issues we hit (and how we fixed them)
+
+Real problems from standing this stack up for real — the root-cause/fix is the useful part.
+
+### App metrics never reached Prometheus
+**Symptom:** The SLO dashboard and alerts had no data; `http_server_*` series were missing in Prometheus.
+**Cause:** The opentelemetry-collector chart's built-in ServiceMonitor scrapes the collector's **self-telemetry** (`:8888`), not the **`prometheus` exporter** (`:9464`) where the app metrics actually land.
+**Fix:** Added a dedicated ServiceMonitor for port `9464` with **`honorLabels: true`** (so the exporter's `job="notes-api"` survives the scrape) — `observability/otel-servicemonitor.yaml`.
+
+### Alert/SLO queries matched nothing (metric-name skew)
+**Symptom:** Even with metrics flowing, the alert exprs returned empty.
+**Cause:** OTel's auto-instrumentation emits **legacy** HTTP semconv names — `http_server_duration_milliseconds_*` with labels `http_method` / `http_status_code` (and **milliseconds**, not seconds) — not the newer `http_server_request_duration_seconds_*` names the walkthrough assumed.
+**Fix:** Read the real names off the collector's `:9464` and Prometheus, then corrected `alerts.yaml`, `slos.yaml`, and the SLO dashboard (including the ms latency buckets). **Always verify the actual metric names after install.**
+
+### Loki writes failed: "at least 2 live replicas required"
+**Symptom:** Loki read queries hung; write pods logged `at least 2 live replicas required, could only find 1`.
+**Cause:** Loki's default **replication factor is 3**, but the SimpleScalable values ran a single `write` replica.
+**Fix:** Set `loki.commonConfig.replication_factor: 1` (single-replica lab) in `loki-values.yaml`.
+
+### Loki/Prometheus pods stuck Pending — disk attach limit
+**Symptom:** `loki-backend-0` (and others) Pending; events showed volume-attach failures.
+**Cause:** The single `B2s_v2` user node hit its **max data-disk limit** once Prometheus + Alertmanager + Grafana + Loki all wanted PVCs.
+**Fix:** Scaled the user node pool to **3 nodes** so the volumes could spread.
+
+### Couldn't produce 5xx to fire the alert
+**Symptom:** Hammering the API never tripped `HighErrorRate` — bad input returned **400**, and a DB outage made requests **hang** instead of erroring.
+**Cause:** The handlers had no error handling (no clean 500), and the pg pool had no connection timeout, so a down DB stalled the request.
+**Fix:** Added `try/catch → 500` on the handlers, `connectionTimeoutMillis`/`query_timeout` on the pool (fail-fast → 500), and a **resilient startup** (retry, don't `process.exit` if the DB is briefly down). Then a simulated outage (`az postgres flexible-server stop`) under load fired the alert → Slack.
+
+> Smaller ones: Prometheus/Grafana images are **distroless** (no `sh`), so debug by `kubectl port-forward` + query the HTTP API rather than `kubectl exec`. And the PrometheusRule **must** carry the `release: kps` label or the operator ignores it.
+
+---
+
 ## Cost
 
 The stack is open source (€0 licensing). Added on top of M1: extra pod pressure may add a node (0–25 €/mo depending on autoscale) and the Loki blob storage (< 1 €/mo for ~10 GB). A deploy-verify-destroy session is ~€2–3. `helm uninstall` the stacks, then `terraform destroy` returns spend to ~€0.

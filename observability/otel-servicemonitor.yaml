@@ -1,0 +1,20 @@
+# Scrape the OTel Collector's Prometheus exporter (port 9464) where app metrics land.
+# honorLabels keeps the exporter's job="notes-api" label instead of overwriting it.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otelc-app-metrics
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  namespaceSelector:
+    matchNames: [monitoring]
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: otelc
+      app.kubernetes.io/name: opentelemetry-collector
+  endpoints:
+    - port: prometheus
+      interval: 15s
+      honorLabels: true

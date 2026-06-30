@@ -14,8 +14,8 @@ spec:
       rules:
         - alert: HighErrorRate
           expr: |
-            sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_response_status_code=~"5.."}[5m]))
-              / sum(rate(http_server_request_duration_seconds_count{job="notes-api"}[5m])) > 0.05
+            sum(rate(http_server_duration_milliseconds_count{job="notes-api",http_status_code=~"5.."}[5m]))
+              / sum(rate(http_server_duration_milliseconds_count{job="notes-api"}[5m])) > 0.05
           for: 5m
           labels:
             severity: warning
@@ -24,8 +24,8 @@ spec:
 
         - alert: FastBurnSLO
           expr: |
-            (sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_response_status_code=~"5.."}[1h]))
-              / sum(rate(http_server_request_duration_seconds_count{job="notes-api"}[1h])))
+            (sum(rate(http_server_duration_milliseconds_count{job="notes-api",http_status_code=~"5.."}[1h]))
+              / sum(rate(http_server_duration_milliseconds_count{job="notes-api"}[1h])))
               > (14 * 0.01)
           for: 5m
           labels:
