@@ -1,0 +1,47 @@
+# OpenTelemetry Collector (deployment mode): receives OTLP from the api,
+# forwards traces to Tempo and exposes app metrics for Prometheus to scrape.
+mode: deployment
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+ports:
+  prometheus:
+    enabled: true
+    containerPort: 9464
+    servicePort: 9464
+    protocol: TCP
+
+# Let kube-prometheus-stack scrape the collector's Prometheus exporter.
+serviceMonitor:
+  enabled: true
+  extraLabels:
+    release: kps
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  processors:
+    batch: {}
+  exporters:
+    otlp/tempo:
+      endpoint: tempo.tempo.svc.cluster.local:4317
+      tls:
+        insecure: true
+    prometheus:
+      endpoint: 0.0.0.0:9464
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [otlp/tempo]
+      metrics:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [prometheus]

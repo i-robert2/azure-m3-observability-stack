@@ -1,0 +1,21 @@
+# SLOs as code for notes-api. Documentation/intent artifact; the burn-rate alerts in
+# alerts.yaml enforce the availability objective. (Sloth/Pyrra could generate rules from this.)
+service: notes-api
+slos:
+  - name: availability
+    objective: 99 # % of non-5xx requests over 28d
+    indicator:
+      good: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_response_status_code!~"5.."}[28d]))'
+      total: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api"}[28d]))'
+
+  - name: read_latency_p95
+    objective: 99 # % of GET requests served < 100ms
+    indicator:
+      good: 'sum(rate(http_server_request_duration_seconds_bucket{job="notes-api",http_request_method="GET",le="0.1"}[28d]))'
+      total: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_request_method="GET"}[28d]))'
+
+  - name: write_latency_p95
+    objective: 99 # % of POST requests served < 300ms
+    indicator:
+      good: 'sum(rate(http_server_request_duration_seconds_bucket{job="notes-api",http_request_method="POST",le="0.3"}[28d]))'
+      total: 'sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_request_method="POST"}[28d]))'

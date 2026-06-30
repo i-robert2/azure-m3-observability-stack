@@ -1,0 +1,56 @@
+# kube-prometheus-stack values. Grafana is exposed via ingress-nginx + cert-manager.
+# The Grafana host is set at install time (--set grafana.ingress.hosts[0]=grafana.<ingress-ip>.sslip.io)
+# and the admin password comes from --set grafana.adminPassword (never committed).
+
+grafana:
+  defaultDashboardsTimezone: browser
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    # hosts + tls hosts are injected via --set at install time (sslip.io host).
+    tls:
+      - secretName: grafana-tls
+        hosts: []
+  persistence:
+    enabled: true
+    size: 5Gi
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 300m, memory: 256Mi }
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    # Scrape any ServiceMonitor/PodMonitor regardless of release label.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits: { cpu: 600m, memory: 1Gi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources: { requests: { storage: 10Gi } }
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 25m, memory: 64Mi }
+      limits: { cpu: 100m, memory: 128Mi }
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources: { requests: { storage: 2Gi } }
+
+# Trim node pressure on a small cluster.
+prometheus-node-exporter:
+  resources:
+    requests: { cpu: 10m, memory: 24Mi }
+kube-state-metrics:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }

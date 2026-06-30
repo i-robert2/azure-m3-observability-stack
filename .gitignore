@@ -1,0 +1,36 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!example.tfvars
+backend.hcl
+crash.log
+
+# Kubeconfig / secrets
+kubeconfig
+*.kubeconfig
+.vault-password
+
+# Node / build
+node_modules/
+dist/
+build/
+*.log
+
+# Helm
+charts/**/charts/
+*.tgz
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Cosign private key + password (public key cosign.pub IS committed)
+cosign.key
+cosign-password.txt
+
+# M3: rendered configs containing secrets (storage key / webhook)
+*.rendered.yaml
+observability/*.rendered.yaml

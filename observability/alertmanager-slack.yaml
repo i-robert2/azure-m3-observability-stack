@@ -1,0 +1,37 @@
+# Alertmanager config that routes alerts to a chat webhook.
+# REPLACE_SLACK_WEBHOOK is substituted at apply time into a *.rendered.yaml (gitignored).
+# The secret name must match kube-prometheus-stack's Alertmanager: alertmanager-<release>-kube-prometheus-stack-alertmanager
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-kps-kube-prometheus-stack-alertmanager
+  namespace: monitoring
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname', 'severity']
+      receiver: chat
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        - matchers: [severity = "critical"]
+          receiver: chat-critical
+    receivers:
+      - name: chat
+        slack_configs:
+          - api_url: 'REPLACE_SLACK_WEBHOOK'
+            channel: '#alerts-warn'
+            send_resolved: true
+            title: '{{ .CommonLabels.alertname }} ({{ .CommonLabels.severity }})'
+            text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+      - name: chat-critical
+        slack_configs:
+          - api_url: 'REPLACE_SLACK_WEBHOOK'
+            channel: '#alerts-page'
+            send_resolved: true
+            title: '🔥 {{ .CommonLabels.alertname }}'
+            text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'

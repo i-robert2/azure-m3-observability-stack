@@ -1,0 +1,56 @@
+{
+  "title": "Notes API — SLO",
+  "uid": "notes-api-slo",
+  "schemaVersion": 39,
+  "timezone": "browser",
+  "panels": [
+    {
+      "title": "Error rate (5m)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_request_duration_seconds_count{job=\"notes-api\",http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{job=\"notes-api\"}[5m]))",
+          "legendFormat": "5xx ratio"
+        }
+      ]
+    },
+    {
+      "title": "p95 latency (5m)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{job=\"notes-api\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "title": "Requests per second",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_request_duration_seconds_count{job=\"notes-api\"}[5m]))",
+          "legendFormat": "rps"
+        }
+      ]
+    },
+    {
+      "title": "Error budget burn (1h vs 1% budget)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "none", "decimals": 2 } },
+      "targets": [
+        {
+          "expr": "(sum(rate(http_server_request_duration_seconds_count{job=\"notes-api\",http_response_status_code=~\"5..\"}[1h])) / sum(rate(http_server_request_duration_seconds_count{job=\"notes-api\"}[1h]))) / 0.01",
+          "legendFormat": "burn rate"
+        }
+      ]
+    }
+  ]
+}

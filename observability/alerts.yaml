@@ -1,0 +1,34 @@
+# PrometheusRule picked up by kube-prometheus-stack (the `release: kps` label is required).
+# NOTE: OTel auto-instrumentation metric/label names vary by version. After install, check
+# Prometheus > Status > Targets / the otel-collector metrics and adjust these exprs if needed.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: notes-api-alerts
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  groups:
+    - name: notes-api.rules
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_response_status_code=~"5.."}[5m]))
+              / sum(rate(http_server_request_duration_seconds_count{job="notes-api"}[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "notes-api 5xx rate > 5% for 5m"
+
+        - alert: FastBurnSLO
+          expr: |
+            (sum(rate(http_server_request_duration_seconds_count{job="notes-api",http_response_status_code=~"5.."}[1h]))
+              / sum(rate(http_server_request_duration_seconds_count{job="notes-api"}[1h])))
+              > (14 * 0.01)
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Fast burn: SLO error budget burning at 14x — page now"
